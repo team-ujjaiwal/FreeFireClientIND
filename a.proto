@@ -1,0 +1,146 @@
+syntax = "proto3";
+package proto;
+
+message CSGetPlayerPersonalShowRes {
+  repeated PlayerInfo players = 1;
+  Inventory inventory = 2;
+  ClanInfo clan = 6;
+  PlayerInfo teammate = 7;
+  Achievement achievement = 8;
+  PlayerStatus status = 9;
+  Currency currency = 10;
+  TimeLimitedEvent event = 11;
+}
+
+message PlayerInfo {
+  int64 user_id = 1;
+  int32 account_type = 2;
+  string username = 3;
+  string country_code = 5;
+  int32 age = 6;
+  int32 level = 7;
+  int64 banner = 11;
+  int64 avatar = 12;
+  int32 rank = 14;
+  int32 experience_points = 15;
+  int32 unknown_field_17 = 17;
+  int32 matches_played = 18;
+  fixed64 unique_identifier = 19;
+  int32 combat_skill = 20;
+  int32 total_kills = 21;
+  int64 last_login = 24;
+  int32 health = 30;
+  int32 stamina = 31;
+  bytes encrypted_data = 32;
+  int32 current_rank = 35;
+  int32 max_health = 36;
+  ClanTag clan_tag = 41;
+  int64 clan_join_date = 44;
+  int32 unknown_field_48 = 48;
+  PremiumFeatures premium = 49;
+  string game_version = 50;
+  bool is_online = 52;
+  bool in_match = 53;
+  repeated StatEntry stats = 61;
+  RecentActivity activity = 63;
+  StatusIndicator status_indicator = 64;
+}
+
+message ClanTag {
+  bytes tag_bytes = 4;
+  string tag_display = 5;
+  int32 unknown_field_7 = 7;
+}
+
+message PremiumFeatures {
+  int32 premium_level = 2;
+  int32 premium_days = 3;
+}
+
+message StatEntry {
+  int32 stat_id = 1;
+  int32 tier = 2;
+  StatDetail details = 3;
+}
+
+message StatDetail {
+  int32 stat_type = 1;
+  int32 progress = 2;
+  int32 max_value = 3;
+  int32 unlocks = 4;
+  bool completed = 5;
+}
+
+message RecentActivity {
+  repeated ActivityEntry entries = 1;
+}
+
+message ActivityEntry {
+  int32 activity_type = 1;
+  int64 timestamp = 2;
+  int32 count = 3;
+}
+
+message StatusIndicator {
+  int32 status_type = 1;
+  int32 status_value = 2;
+}
+
+message Inventory {
+  int32 inventory_id = 1;
+  int32 capacity = 3;
+  bytes inventory_hash = 4;
+  repeated InventoryItem items = 5;
+  int32 version = 6;
+  bool is_equipped = 8;
+  int64 last_update = 11;
+  int32 unknown_field_12 = 12;
+}
+
+message InventoryItem {
+  oneof item_type {
+    int32 consumable = 1;
+    int32 weapon = 2;
+    int32 skin = 3;
+  }
+  int32 quantity = 4;
+}
+
+message ClanInfo {
+  int64 member_id_1 = 1;
+  string clan_name = 2;
+  int64 member_id_2 = 3;
+  int32 clan_level = 4;
+  int32 clan_xp = 5;
+  int32 clan_xp_required = 6;
+}
+
+message Achievement {
+  int32 achievement_id = 1;
+  int32 progress = 3;
+  int32 current_level = 4;
+  int32 reward_id = 5;
+  int32 target_id = 6;
+  int32 unlock_tier = 9;
+}
+
+message PlayerStatus {
+  int32 status_id = 1;
+  int32 unknown_field_2 = 2;
+  int32 status_level = 3;
+  string status_message = 9;
+  int32 status_flags = 10;
+  bytes custom_data = 14;
+}
+
+message Currency {
+  int32 coins = 1;
+}
+
+message TimeLimitedEvent {
+  int32 event_id = 1;
+  int32 unknown_field_3 = 3;
+  int64 start_time = 8;
+  int64 end_time = 9;
+  bool is_active = 10;
+}
