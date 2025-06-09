@@ -3,116 +3,145 @@ from Crypto.Util.Padding import pad
 import binascii
 from flask import Flask, request, jsonify
 import requests
+import random
 import uid_generator_pb2
 from a_pb2 import CSGetPlayerPersonalShowRes
 from secret import key, iv
 
 app = Flask(__name__)
 
-# Helper: Convert proto to dict (recursively)
-def proto_to_dict(message):
-    result = {}
-    for field, value in message.ListFields():
-        if field.label == field.LABEL_REPEATED:
-            result[field.name] = [proto_to_dict(v) if hasattr(v, 'ListFields') else v for v in value]
-        else:
-            result[field.name] = proto_to_dict(value) if hasattr(value, 'ListFields') else value
-    return result
+def hex_to_bytes(hex_string):
+    return bytes.fromhex(hex_string)
 
-# Convert proto to bytes
 def create_protobuf(akiru_, aditya):
     message = uid_generator_pb2.uid_generator()
     message.akiru_ = akiru_
     message.aditya = aditya
     return message.SerializeToString()
 
-# Encrypt protobuf bytes using AES
-def encrypt_aes(data_bytes, key, iv):
-    key_bytes = key.encode()[:16]
-    iv_bytes = iv.encode()[:16]
-    cipher = AES.new(key_bytes, AES.MODE_CBC, iv_bytes)
-    padded_data = pad(data_bytes, AES.block_size)
-    encrypted = cipher.encrypt(padded_data)
-    return encrypted
+def protobuf_to_hex(protobuf_data):
+    return binascii.hexlify(protobuf_data).decode()
 
-# Decode response protobuf hex to object
-def decode_response(hex_string):
-    byte_data = binascii.unhexlify(hex_string)
-    message = CSGetPlayerPersonalShowRes()
-    message.ParseFromString(byte_data)
-    return message
+def decode_hex(hex_string):
+    byte_data = binascii.unhexlify(hex_string.replace(' ', ''))
+    users = CSGetPlayerPersonalShowRes()
+    users.ParseFromString(byte_data)
+    return users
 
-# UID-password for JWT
+def encrypt_aes(hex_data, key, iv):
+    key = key.encode()[:16]
+    iv = iv.encode()[:16]
+    cipher = AES.new(key, AES.MODE_CBC, iv)
+    padded_data = pad(bytes.fromhex(hex_data), AES.block_size)
+    encrypted_data = cipher.encrypt(padded_data)
+    return binascii.hexlify(encrypted_data).decode()
+
 def get_credentials(region):
     region = region.upper()
     if region == "IND":
         return "3942040791", "EDD92B8948F4453F544C9432DFB4996D02B4054379A0EE083D8459737C50800B"
-    return "uid", "password"
+    elif region in ["NA", "BR", "SAC", "US"]:
+        return "uid", "password"
+    else:
+        return "uid", "password"
 
-# JWT token fetch
 def get_jwt_token(region):
     uid, password = get_credentials(region)
-    url = f"https://jwt-aditya.vercel.app/token?uid={uid}&password={password}"
-    try:
-        r = requests.get(url)
-        if r.status_code == 200:
-            return r.json()
-    except Exception:
+    jwt_url = f"https://jwt-aditya.vercel.app/token?uid={uid}&password={password}"
+    response = requests.get(jwt_url)
+    if response.status_code != 200:
         return None
-    return None
+    return response.json()
 
-@app.route("/player-info", methods=["GET"])
-def player_info():
-    uid = request.args.get("uid")
-    region = request.args.get("region", "IND")
+@app.route('/player-info', methods=['GET'])
+def main():
+    uid = request.args.get('uid')
+    region = request.args.get('region')
 
     if not uid or not region:
-        return jsonify({"error": "Missing UID or region"}), 400
+        return jsonify({"error": "Missing 'uid' or 'region' query parameter"}), 400
 
     try:
-        uid_int = int(uid)
+        saturn_ = int(uid)
     except ValueError:
         return jsonify({"error": "Invalid UID"}), 400
 
-    # Step 1: Get JWT + server URL
-    jwt_data = get_jwt_token(region)
-    if not jwt_data or "token" not in jwt_data:
-        return jsonify({"error": "JWT token fetch failed"}), 500
+    jwt_info = get_jwt_token(region)
+    if not jwt_info or 'token' not in jwt_info:
+        return jsonify({"error": "Failed to fetch JWT token"}), 500
 
-    server_url = jwt_data["serverUrl"]
-    token = jwt_data["token"]
+    api = jwt_info['serverUrl']
+    token = jwt_info['token']
 
-    # Step 2: Create UID proto → encrypt
-    proto_bytes = create_protobuf(uid_int, 1)
-    encrypted_body = encrypt_aes(proto_bytes, key, iv)
+    protobuf_data = create_protobuf(saturn_, 1)
+    hex_data = protobuf_to_hex(protobuf_data)
+    encrypted_hex = encrypt_aes(hex_data, key, iv)
 
-    # Step 3: Send POST request to Free Fire endpoint
     headers = {
-        "Authorization": f"Bearer {token}",
-        "User-Agent": "Dalvik/2.1.0",
-        "X-Unity-Version": "2018.4.11f1",
-        "ReleaseVersion": "OB49",
-        "Content-Type": "application/x-www-form-urlencoded"
+        'User-Agent': 'Dalvik/2.1.0 (Linux; U; Android 9; ASUS_Z01QD Build/PI)',
+        'Connection': 'Keep-Alive',
+        'Expect': '100-continue',
+        'Authorization': f'Bearer {token}',
+        'X-Unity-Version': '2018.4.11f1',
+        'X-GA': 'v1 1',
+        'ReleaseVersion': 'OB49',
+        'Content-Type': 'application/x-www-form-urlencoded',
     }
 
     try:
-        res = requests.post(
-            url=f"{api}/GetPlayerPersonalShow",
-            headers=headers,
-            data=encrypted_body
-        )
-        res.raise_for_status()
-    except Exception as e:
-        return jsonify({"error": "Game server request failed", "details": str(e)}), 502
+        response = requests.post(f"{api}/GetPlayerPersonalShow", headers=headers, data=bytes.fromhex(encrypted_hex))
+        response.raise_for_status()
+    except requests.RequestException:
+        return jsonify({"error": "Failed to contact game server"}), 502
 
-    # Step 4: Decode Proto response
+    hex_response = response.content.hex()
+
     try:
-        proto_message = decode_response(res.content.hex())
-        result_json = proto_to_dict(proto_message)
-        result_json["credit"] = "@Ujjaiwal"
-        return jsonify(result_json)
+        users = decode_hex(hex_response)
     except Exception as e:
-        return jsonify({"error": "Failed to parse proto", "details": str(e)}), 500
+        return jsonify({"error": f"Failed to parse Protobuf: {str(e)}"}), 500
+
+    result = {}
+
+    if users.players:
+        result['players'] = []
+        for p in users.players:
+            result['players'].append({
+                'user_id': p.user_id,
+                'username': p.username,
+                'level': p.level,
+                'rank': p.rank,
+                'last_login': p.last_login,
+                'country_code': p.country_code,
+                'avatar': p.avatar,
+                'banner': p.banner,
+                'clan_tag': p.clan_tag.tag_display if p.HasField("clan_tag") else None,
+                'premium_level': p.premium.premium_level if p.HasField("premium") else None,
+                'game_version': p.game_version,
+                'is_online': p.is_online,
+                'in_match': p.in_match
+            })
+
+    if users.HasField("clan"):
+        result["clan"] = {
+            "clan_name": users.clan.clan_name,
+            "clan_level": users.clan.clan_level,
+            "clan_xp": users.clan.clan_xp,
+            "clan_xp_required": users.clan.clan_xp_required
+        }
+
+    if users.HasField("inventory"):
+        result["inventory"] = {
+            "inventory_id": users.inventory.inventory_id,
+            "capacity": users.inventory.capacity,
+            "version": users.inventory.version,
+            "is_equipped": users.inventory.is_equipped,
+            "last_update": users.inventory.last_update,
+            "item_count": len(users.inventory.items)
+        }
+
+    result['credit'] = '@Ujjaiwal'
+    return jsonify(result)
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)
