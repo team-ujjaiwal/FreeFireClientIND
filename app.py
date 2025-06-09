@@ -97,7 +97,7 @@ def player_info():
 
     try:
         res = requests.post(
-            url=f"{server_url}/GetPlayerPersonalShow",
+            url=f"{api}/GetPlayerPersonalShow",
             headers=headers,
             data=encrypted_body
         )
