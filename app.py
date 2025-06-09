@@ -103,42 +103,42 @@ def main():
 
     result = {}
 
-if users.players:
-    result['players'] = []
-    for p in users.players:
-        result['players'].append({
-            'user_id': p.user_id,
-            'username': p.username,
-            'level': p.level,
-            'rank': p.rank,
-            'last_login': p.last_login,
-            'country_code': p.country_code,
-            'avatar': p.avatar,
-            'banner': p.banner,
-            'clan_tag': p.clan_tag.tag_display if p.HasField("clan_tag") else None,
-            'premium_level': p.premium.premium_level if p.HasField("premium") else None,
-            'game_version': p.game_version,
-            'is_online': p.is_online,
-            'in_match': p.in_match
-        })
+    if users.players:
+        result['players'] = []
+        for p in users.players:
+            result['players'].append({
+                'user_id': p.user_id,
+                'username': p.username,
+                'level': p.level,
+                'rank': p.rank,
+                'last_login': p.last_login,
+                'country_code': p.country_code,
+                'avatar': p.avatar,
+                'banner': p.banner,
+                'clan_tag': p.clan_tag.tag_display if p.HasField("clan_tag") else None,
+                'premium_level': p.premium.premium_level if p.HasField("premium") else None,
+                'game_version': p.game_version,
+                'is_online': p.is_online,
+                'in_match': p.in_match
+            })
 
     if users.HasField("clan"):
-    result["clan"] = {
-        "clan_name": users.clan.clan_name,
-        "clan_level": users.clan.clan_level,
-        "clan_xp": users.clan.clan_xp,
-        "clan_xp_required": users.clan.clan_xp_required
-    }) 
+        result["clan"] = {
+            "clan_name": users.clan.clan_name,
+            "clan_level": users.clan.clan_level,
+            "clan_xp": users.clan.clan_xp,
+            "clan_xp_required": users.clan.clan_xp_required
+        }
 
     if users.HasField("inventory"):
-    result["inventory"] = {
-        "inventory_id": users.inventory.inventory_id,
-        "capacity": users.inventory.capacity,
-        "version": users.inventory.version,
-        "is_equipped": users.inventory.is_equipped,
-        "last_update": users.inventory.last_update,
-        "item_count": len(users.inventory.items)
-    }) 
+        result["inventory"] = {
+            "inventory_id": users.inventory.inventory_id,
+            "capacity": users.inventory.capacity,
+            "version": users.inventory.version,
+            "is_equipped": users.inventory.is_equipped,
+            "last_update": users.inventory.last_update,
+            "item_count": len(users.inventory.items)
+        }
 
     result['credit'] = '@Ujjaiwal'
     return jsonify(result)
