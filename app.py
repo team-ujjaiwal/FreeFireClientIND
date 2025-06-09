@@ -89,7 +89,7 @@ def main():
     }
 
     try:
-        response = requests.post(f"{api}/GetPlayerPersonalShow", headers=headers, data=bytes.fromhex(encrypted_hex))
+        response = requests.post(f"{serverUrl}/GetPlayerPersonalShow", headers=headers, data=bytes.fromhex(encrypted_hex))
         response.raise_for_status()
     except requests.RequestException:
         return jsonify({"error": "Failed to contact game server"}), 502
