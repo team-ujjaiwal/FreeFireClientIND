@@ -35,15 +35,24 @@ def change_name():
             "ReleaseVersion": "OB50"
         }
 
-        # ✅ CORRECTED ENDPOINT BELOW
         url = "https://loginbp.ggblueshark.com/MajorModifyNickname"
         response = requests.post(url, headers=headers, data=binary_data)
 
-        return Response(
-            response.content,
-            status=response.status_code,
-            content_type=response.headers.get("Content-Type", "application/octet-stream")
-        )
+        # Protobuf response को decode करें
+        res = modify_nickname_pb2.ModifyNicknameRes()
+        res.ParseFromString(response.content)
+        
+        if res.success:
+            return jsonify({
+                "status": "success", 
+                "message": "Nickname changed successfully",
+                "new_nickname": nickname
+            })
+        else:
+            return jsonify({
+                "status": "error", 
+                "message": f"Failed to change nickname: {res.message}"
+            }), 400
 
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
