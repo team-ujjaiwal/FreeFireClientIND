@@ -1,6 +1,6 @@
 from flask import Flask, request, jsonify, Response
 import requests
-import modify_nickname_pb2  # Make sure this is generated via protoc
+import modify_nickname_pb2  # नई generated file
 
 app = Flask(__name__)
 
@@ -23,7 +23,7 @@ def change_name():
         # Build the Protobuf request
         req = modify_nickname_pb2.ModifyNicknameReq()
         req.nickname = nickname
-        req.account_id = 0  # Can update if needed
+        req.account_id = 0
 
         binary_data = req.SerializeToString()
 
@@ -38,32 +38,23 @@ def change_name():
         url = "https://loginbp.ggblueshark.com/MajorModifyNickname"
         response = requests.post(url, headers=headers, data=binary_data)
 
-        # HTTP status code के आधार पर check करें
+        # Response को decode करें
         if response.status_code == 200:
-            # Successful response (200 OK)
-            # Response content की length check करें (empty response often indicates success)
-            if len(response.content) == 0:
+            res = modify_nickname_pb2.ModifyNicknameRes()
+            res.ParseFromString(response.content)
+            
+            if res.success:
                 return jsonify({
                     "status": "success", 
-                    "message": "Nickname changed successfully",
-                    "new_nickname": nickname
+                    "message": res.message,
+                    "new_nickname": res.new_nickname
                 })
             else:
-                # Non-empty response - might contain error information
-                try:
-                    # Try to decode as text to see if there's a readable error message
-                    error_message = response.content.decode('utf-8', errors='ignore')
-                    return jsonify({
-                        "status": "error", 
-                        "message": f"Server returned non-empty response: {error_message}"
-                    }), 400
-                except:
-                    return jsonify({
-                        "status": "error", 
-                        "message": "Server returned non-empty binary response (might be protobuf)"
-                    }), 400
+                return jsonify({
+                    "status": "error", 
+                    "message": res.message
+                }), 400
         else:
-            # Error status code
             return jsonify({
                 "status": "error", 
                 "message": f"Server returned error status: {response.status_code}",
