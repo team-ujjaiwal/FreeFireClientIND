@@ -35,7 +35,7 @@ def change_name():
             "ReleaseVersion": "OB50"
         }
 
-        url = "https://loginbp.ggblueshark.com/MajorModifyNickname"
+        url = "https://client.ind.freefiremobile.com/MajorModifyNickname"
         response = requests.post(url, headers=headers, data=binary_data)
 
         # Response को decode करें
