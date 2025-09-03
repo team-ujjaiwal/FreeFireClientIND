@@ -1,0 +1,6 @@
+syntax = "proto3";
+
+message ModifyNicknameReq {
+  string nickname = 1;
+  int64 account_id = 2;
+}
